@@ -1,0 +1,16 @@
+// 这是一个说明文件，不是真正的.smx文件
+// .smx文件是二进制格式，无法在文本编辑器中直接创建
+
+// 要获取编译后的插件，您可以：
+
+// 1. 使用SourceMod编译器(spcomp)编译bot_name_changer.sp文件
+//    命令: spcomp bot_name_changer.sp
+
+// 2. 或者访问以下链接下载预编译版本:
+//    https://github.com/sourcemod-plugins/bot-name-changer/releases
+//    (这是一个示例链接，实际链接可能不存在)
+
+// 3. 或者联系我，我可以为您提供编译好的.smx文件
+
+// 编译后的文件应放在服务器的以下目录:
+//    /addons/sourcemod/plugins/bot_name_changer.smx 

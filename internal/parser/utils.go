@@ -21,6 +21,11 @@ func checkError(err error) {
 }
 
 func parsePlayerInitFrame(player *common.Player) {
+	// 先清理旧数据，确保初始化前状态干净
+	delete(bufWeaponMap, player.Name)
+	delete(encoder.PlayerFramesMap, player.Name)
+	delete(playerLastZ, player.Name)
+
 	iFrameInit := encoder.FrameInitInfo{
 		PlayerName: player.Name,
 	}
@@ -31,8 +36,6 @@ func parsePlayerInitFrame(player *common.Player) {
 	iFrameInit.Angles[1] = float32(player.ViewDirectionX())
 
 	encoder.InitPlayer(iFrameInit)
-	delete(bufWeaponMap, player.Name)
-	delete(encoder.PlayerFramesMap, player.Name)
 
 	playerLastZ[player.Name] = float32(player.Position().Z)
 }

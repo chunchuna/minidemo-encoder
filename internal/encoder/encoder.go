@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	ilog "github.com/hx-w/minidemo-encoder/internal/logger"
@@ -27,6 +28,23 @@ func init() {
 	} else {
 		ilog.InfoLogger.Println("保存目录存在：", saveDir)
 	}
+}
+
+// sanitizeFilename 清理文件名中的非法字符
+func sanitizeFilename(filename string) string {
+	// Windows不支持的字符: < > : " / \ | ? *
+	replacer := strings.NewReplacer(
+		"<", "_",
+		">", "_",
+		":", "_",
+		"\"", "_",
+		"/", "_",
+		"\\", "_",
+		"|", "_",
+		"?", "_",
+		"*", "_",
+	)
+	return replacer.Replace(filename)
 }
 
 func InitPlayer(initFrame FrameInitInfo) {
@@ -67,7 +85,9 @@ func WriteToRecFile(playerName string, roundNum int32, subdir string) {
 	if ok, _ := PathExists(subDir); !ok {
 		os.MkdirAll(subDir, os.ModePerm)
 	}
-	fileName := subDir + "/" + playerName + ".rec"
+	// 清理文件名中的非法字符
+	safePlayerName := sanitizeFilename(playerName)
+	fileName := subDir + "/" + safePlayerName + ".rec"
 	file, err := os.Create(fileName) // 创建文件, "binbin"是文件名字
 	if err != nil {
 		ilog.ErrorLogger.Println("文件创建失败", err.Error())
@@ -122,5 +142,6 @@ func WriteToRecFile(playerName string, roundNum int32, subdir string) {
 
 	delete(PlayerFramesMap, playerName)
 	file.Write(bufMap[playerName].Bytes())
+	delete(bufMap, playerName) // 清理buffer map，避免多回合状态残留
 	ilog.InfoLogger.Printf("[第%d回合] 选手录像保存成功: %s.rec\n", roundNum, playerName)
 }

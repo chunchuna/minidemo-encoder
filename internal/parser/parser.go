@@ -20,6 +20,13 @@ func Start(filePath string) {
 	iParser := dem.NewParser(iFile)
 	defer iParser.Close()
 
+	// 先解析头部以获取地图信息
+	header, err := iParser.ParseHeader()
+	checkError(err)
+	ilog.InfoLogger.Printf("========================================")
+	ilog.InfoLogger.Printf("地图: %s", header.MapName)
+	ilog.InfoLogger.Printf("========================================")
+
 	// 处理特殊event构成的button表示
 	var buttonTickMap map[TickPlayer]int32 = make(map[TickPlayer]int32)
 	var (
@@ -51,6 +58,9 @@ func Start(filePath string) {
 	})
 
 	iParser.RegisterEventHandler(func(e events.WeaponFire) {
+		if e.Shooter == nil {
+			return
+		}
 		gs := iParser.GameState()
 		currentTick := gs.IngameTick()
 		key := TickPlayer{currentTick, e.Shooter.SteamID64}
@@ -62,6 +72,9 @@ func Start(filePath string) {
 	})
 
 	iParser.RegisterEventHandler(func(e events.PlayerJump) {
+		if e.Player == nil {
+			return
+		}
 		gs := iParser.GameState()
 		currentTick := gs.IngameTick()
 		key := TickPlayer{currentTick, e.Player.SteamID64}
@@ -109,6 +122,7 @@ func Start(filePath string) {
 		tPlayers := gs.TeamTerrorists().Members()
 		ctPlayers := gs.TeamCounterTerrorists().Members()
 		Players := append(tPlayers, ctPlayers...)
+		ilog.InfoLogger.Printf("回合%d结束，共%d名选手\n", roundNum, len(Players))
 		for _, player := range Players {
 			if player != nil {
 				// save to rec file
