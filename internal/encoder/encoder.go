@@ -118,6 +118,10 @@ func WriteToRecFile(playerName string, roundNum int32, subdir string) {
 		for idx := 0; idx < 2; idx++ {
 			WriteToBuf(playerName, frame.PredictedAngles[idx])
 		}
+		// 写入当前帧的origin（关键！必须在CSWeaponID之前）
+		for idx := 0; idx < 3; idx++ {
+			WriteToBuf(playerName, frame.Origin[idx])
+		}
 		WriteToBuf(playerName, frame.CSWeaponID)
 		WriteToBuf(playerName, frame.PlayerSubtype)
 		WriteToBuf(playerName, frame.PlayerSeed)
