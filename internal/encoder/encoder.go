@@ -81,6 +81,14 @@ func InitPlayer(initFrame FrameInitInfo) {
 }
 
 func WriteToRecFile(playerName string, roundNum int32, subdir string) {
+	// 检查是否有帧数据
+	tickCount := int32(len(PlayerFramesMap[playerName]))
+	if tickCount == 0 {
+		ilog.ErrorLogger.Printf("[第%d回合] 选手 %s 没有帧数据，跳过保存\n", roundNum, playerName)
+		delete(PlayerFramesMap, playerName)
+		return
+	}
+	
 	subDir := saveDir + "/round" + strconv.Itoa(int(roundNum)) + "/" + subdir
 	if ok, _ := PathExists(subDir); !ok {
 		os.MkdirAll(subDir, os.ModePerm)
@@ -96,7 +104,6 @@ func WriteToRecFile(playerName string, roundNum int32, subdir string) {
 	defer file.Close()
 
 	// step.8 tick count
-	var tickCount int32 = int32(len(PlayerFramesMap[playerName]))
 	WriteToBuf(playerName, tickCount)
 
 	// step.9 bookmark count
@@ -147,5 +154,5 @@ func WriteToRecFile(playerName string, roundNum int32, subdir string) {
 	delete(PlayerFramesMap, playerName)
 	file.Write(bufMap[playerName].Bytes())
 	delete(bufMap, playerName) // 清理buffer map，避免多回合状态残留
-	ilog.InfoLogger.Printf("[第%d回合] 选手录像保存成功: %s.rec\n", roundNum, playerName)
+	ilog.InfoLogger.Printf("[第%d回合] 选手录像保存成功: %s.rec (共%d帧)\n", roundNum, playerName, tickCount)
 }

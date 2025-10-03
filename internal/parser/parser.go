@@ -30,16 +30,16 @@ func Start(filePath string) {
 	// 处理特殊event构成的button表示
 	var buttonTickMap map[TickPlayer]int32 = make(map[TickPlayer]int32)
 	var (
-		roundStarted      = 0
-		roundInFreezetime = 0
-		roundNum          = 0
+		roundStarted = 0
+		roundNum     = 0
 	)
 
 	iParser.RegisterEventHandler(func(e events.FrameDone) {
 		gs := iParser.GameState()
 		currentTick := gs.IngameTick()
 
-		if roundInFreezetime == 0 {
+		// 移除 roundInFreezetime 判断，从买枪阶段就开始录制
+		if roundNum > 0 { // 只要回合已经开始就记录
 			tPlayers := gs.TeamTerrorists().Members()
 			ctPlayers := gs.TeamCounterTerrorists().Members()
 			Players := append(tPlayers, ctPlayers...)
@@ -57,6 +57,7 @@ func Start(filePath string) {
 		}
 	})
 
+	var weaponFireCount int = 0
 	iParser.RegisterEventHandler(func(e events.WeaponFire) {
 		if e.Shooter == nil {
 			return
@@ -68,6 +69,10 @@ func Start(filePath string) {
 			buttonTickMap[key] |= IN_ATTACK
 		} else {
 			buttonTickMap[key] = IN_ATTACK
+		}
+		weaponFireCount++
+		if weaponFireCount%100 == 0 {
+			ilog.InfoLogger.Printf("已记录 %d 次开枪事件\n", weaponFireCount)
 		}
 	})
 
@@ -85,18 +90,13 @@ func Start(filePath string) {
 		}
 	})
 
-	// 包括开局准备时间
+	// 包括开局准备时间（买枪阶段）
 	iParser.RegisterEventHandler(func(e events.RoundStart) {
 		roundStarted = 1
-		roundInFreezetime = 1
-	})
-
-	// 准备时间结束，正式开始
-	iParser.RegisterEventHandler(func(e events.RoundFreezetimeEnd) {
-		roundInFreezetime = 0
 		roundNum += 1
-		ilog.InfoLogger.Println("回合开始：", roundNum)
-		// 初始化录像文件
+		ilog.InfoLogger.Printf("回合 %d 开始（包括买枪阶段）\n", roundNum)
+		
+		// 在买枪阶段开始时初始化录像文件
 		// 写入所有选手的初始位置和角度
 		gs := iParser.GameState()
 		tPlayers := gs.TeamTerrorists().Members()
@@ -104,10 +104,15 @@ func Start(filePath string) {
 		Players := append(tPlayers, ctPlayers...)
 		for _, player := range Players {
 			if player != nil {
-				// parse player
+				// parse player - 记录买枪阶段开始时的位置
 				parsePlayerInitFrame(player)
 			}
 		}
+	})
+
+	// 准备时间结束，正式开始
+	iParser.RegisterEventHandler(func(e events.RoundFreezetimeEnd) {
+		ilog.InfoLogger.Printf("回合 %d 买枪阶段结束，正式开始\n", roundNum)
 	})
 
 	// 回合结束，不包括自由活动时间
