@@ -2,6 +2,7 @@ package parser
 
 import (
 	"os"
+	"fmt"
 
 	ilog "github.com/hx-w/minidemo-encoder/internal/logger"
 	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
@@ -20,26 +21,19 @@ func Start(filePath string) {
 	iParser := dem.NewParser(iFile)
 	defer iParser.Close()
 
-	// 先解析头部以获取地图信息
-	header, err := iParser.ParseHeader()
-	checkError(err)
-	ilog.InfoLogger.Printf("========================================")
-	ilog.InfoLogger.Printf("地图: %s", header.MapName)
-	ilog.InfoLogger.Printf("========================================")
-
 	// 处理特殊event构成的button表示
 	var buttonTickMap map[TickPlayer]int32 = make(map[TickPlayer]int32)
 	var (
-		roundStarted = 0
-		roundNum     = 0
+		roundStarted      = 0
+		roundInFreezetime = 0
+		roundNum          = 0
 	)
 
 	iParser.RegisterEventHandler(func(e events.FrameDone) {
 		gs := iParser.GameState()
 		currentTick := gs.IngameTick()
 
-		// 移除 roundInFreezetime 判断，从买枪阶段就开始录制
-		if roundNum > 0 { // 只要回合已经开始就记录
+		if roundInFreezetime == 0 {
 			tPlayers := gs.TeamTerrorists().Members()
 			ctPlayers := gs.TeamCounterTerrorists().Members()
 			Players := append(tPlayers, ctPlayers...)
@@ -57,8 +51,8 @@ func Start(filePath string) {
 		}
 	})
 
-	var weaponFireCount int = 0
 	iParser.RegisterEventHandler(func(e events.WeaponFire) {
+		// guard against nil shooter (can occur on certain events)
 		if e.Shooter == nil {
 			return
 		}
@@ -70,13 +64,10 @@ func Start(filePath string) {
 		} else {
 			buttonTickMap[key] = IN_ATTACK
 		}
-		weaponFireCount++
-		if weaponFireCount%100 == 0 {
-			ilog.InfoLogger.Printf("已记录 %d 次开枪事件\n", weaponFireCount)
-		}
 	})
 
 	iParser.RegisterEventHandler(func(e events.PlayerJump) {
+		// guard against nil player
 		if e.Player == nil {
 			return
 		}
@@ -90,13 +81,18 @@ func Start(filePath string) {
 		}
 	})
 
-	// 包括开局准备时间（买枪阶段）
+	// 包括开局准备时间
 	iParser.RegisterEventHandler(func(e events.RoundStart) {
 		roundStarted = 1
+		roundInFreezetime = 1
+	})
+
+	// 准备时间结束，正式开始
+	iParser.RegisterEventHandler(func(e events.RoundFreezetimeEnd) {
+		roundInFreezetime = 0
 		roundNum += 1
-		ilog.InfoLogger.Printf("回合 %d 开始（包括买枪阶段）\n", roundNum)
-		
-		// 在买枪阶段开始时初始化录像文件
+		ilog.InfoLogger.Println("回合开始：", roundNum)
+		// 初始化录像文件
 		// 写入所有选手的初始位置和角度
 		gs := iParser.GameState()
 		tPlayers := gs.TeamTerrorists().Members()
@@ -104,15 +100,10 @@ func Start(filePath string) {
 		Players := append(tPlayers, ctPlayers...)
 		for _, player := range Players {
 			if player != nil {
-				// parse player - 记录买枪阶段开始时的位置
+				// parse player
 				parsePlayerInitFrame(player)
 			}
 		}
-	})
-
-	// 准备时间结束，正式开始
-	iParser.RegisterEventHandler(func(e events.RoundFreezetimeEnd) {
-		ilog.InfoLogger.Printf("回合 %d 买枪阶段结束，正式开始\n", roundNum)
 	})
 
 	// 回合结束，不包括自由活动时间
@@ -127,11 +118,14 @@ func Start(filePath string) {
 		tPlayers := gs.TeamTerrorists().Members()
 		ctPlayers := gs.TeamCounterTerrorists().Members()
 		Players := append(tPlayers, ctPlayers...)
-		ilog.InfoLogger.Printf("回合%d结束，共%d名选手\n", roundNum, len(Players))
+		tScore := gs.TeamTerrorists().Score()
+		ctScore := gs.TeamCounterTerrorists().Score()
+		roundFolder := fmt.Sprintf("round%d_T%d-CT%d", roundNum, tScore, ctScore)
+		ilog.InfoLogger.Printf("回合%d结束，共%d名选手，目录：%s\n", roundNum, len(Players), roundFolder)
 		for _, player := range Players {
 			if player != nil {
 				// save to rec file
-				saveToRecFile(player, int32(roundNum))
+				saveToRecFile(player, roundFolder)
 			}
 		}
 	})

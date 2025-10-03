@@ -65,10 +65,6 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 	iFrameInfo.ActualVelocity[2] = float32(player.Velocity().Z)
 	iFrameInfo.PredictedAngles[0] = player.ViewDirectionY()
 	iFrameInfo.PredictedAngles[1] = player.ViewDirectionX()
-	// 填充当前帧的origin（每一帧都必须包含！）
-	iFrameInfo.Origin[0] = float32(player.Position().X)
-	iFrameInfo.Origin[1] = float32(player.Position().Y)
-	iFrameInfo.Origin[2] = float32(player.Position().Z)
 	iFrameInfo.PlayerImpulse = 0
 	iFrameInfo.PlayerSeed = 0
 	iFrameInfo.PlayerSubtype = 0
@@ -106,12 +102,10 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 		iFrameInfo.AtVelocity[1] = float32(player.Velocity().Y)
 		iFrameInfo.AtVelocity[2] = float32(player.Velocity().Z)
 	}
-	// record Z velocity
-	deltaZ := float32(player.Position().Z) - playerLastZ[player.Name]
+	// record Z velocity (no delta, use engine velocity)
 	playerLastZ[player.Name] = float32(player.Position().Z)
 
-	// velocity in Z direction need to be recorded specially
-	iFrameInfo.ActualVelocity[2] = deltaZ * float32(tickrate)
+	iFrameInfo.ActualVelocity[2] = float32(player.Velocity().Z)
 
 	// Since I don't know how to get player's button bits in a tick frame,
 	// I have to use *actual vels* and *angles* to generate *predicted vels* approximately
@@ -157,13 +151,17 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 
 	}
 
+	iFrameInfo.Origin[0] = float32(player.Position().X)
+	iFrameInfo.Origin[1] = float32(player.Position().Y)
+	iFrameInfo.Origin[2] = float32(player.Position().Z)
+
 	encoder.PlayerFramesMap[player.Name] = append(encoder.PlayerFramesMap[player.Name], *iFrameInfo)
 }
 
-func saveToRecFile(player *common.Player, roundNum int32) {
+func saveToRecFile(player *common.Player, roundFolder string) {
 	if player.Team == common.TeamTerrorists {
-		encoder.WriteToRecFile(player.Name, roundNum, "t")
+		encoder.WriteToRecFile(player.Name, roundFolder, "t")
 	} else {
-		encoder.WriteToRecFile(player.Name, roundNum, "ct")
+		encoder.WriteToRecFile(player.Name, roundFolder, "ct")
 	}
 }

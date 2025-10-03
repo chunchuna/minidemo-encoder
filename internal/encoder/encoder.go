@@ -3,9 +3,9 @@ package encoder
 import (
 	"bytes"
 	"os"
-	"strconv"
-	"strings"
 	"time"
+	"strings"
+	"regexp"
 
 	ilog "github.com/hx-w/minidemo-encoder/internal/logger"
 )
@@ -30,21 +30,17 @@ func init() {
 	}
 }
 
-// sanitizeFilename 清理文件名中的非法字符
-func sanitizeFilename(filename string) string {
-	// Windows不支持的字符: < > : " / \ | ? *
-	replacer := strings.NewReplacer(
-		"<", "_",
-		">", "_",
-		":", "_",
-		"\"", "_",
-		"/", "_",
-		"\\", "_",
-		"|", "_",
-		"?", "_",
-		"*", "_",
-	)
-	return replacer.Replace(filename)
+// sanitize file name for Windows: replace \\ / : * ? " < > | and trim spaces/dots
+func sanitizeFileName(name string) string {
+	// replace invalid characters with underscore
+	invalidPattern := regexp.MustCompile(`[\\/:*?"<>|]`)
+	safe := invalidPattern.ReplaceAllString(name, "_")
+	// trim trailing spaces and dots which are not allowed in file names
+	safe = strings.TrimRight(safe, " .")
+	if len(safe) == 0 {
+		return "player"
+	}
+	return safe
 }
 
 func InitPlayer(initFrame FrameInitInfo) {
@@ -80,22 +76,14 @@ func InitPlayer(initFrame FrameInitInfo) {
 	// ilog.InfoLogger.Println("初始化成功: ", initFrame.PlayerName)
 }
 
-func WriteToRecFile(playerName string, roundNum int32, subdir string) {
-	// 检查是否有帧数据
-	tickCount := int32(len(PlayerFramesMap[playerName]))
-	if tickCount == 0 {
-		ilog.ErrorLogger.Printf("[第%d回合] 选手 %s 没有帧数据，跳过保存\n", roundNum, playerName)
-		delete(PlayerFramesMap, playerName)
-		return
-	}
-	
-	subDir := saveDir + "/round" + strconv.Itoa(int(roundNum)) + "/" + subdir
+func WriteToRecFile(playerName string, roundFolder string, subdir string) {
+	subDir := saveDir + "/" + roundFolder + "/" + subdir
 	if ok, _ := PathExists(subDir); !ok {
 		os.MkdirAll(subDir, os.ModePerm)
 	}
-	// 清理文件名中的非法字符
-	safePlayerName := sanitizeFilename(playerName)
-	fileName := subDir + "/" + safePlayerName + ".rec"
+	// sanitize file name for windows
+	safeName := sanitizeFileName(playerName)
+	fileName := subDir + "/" + safeName + ".rec"
 	file, err := os.Create(fileName) // 创建文件, "binbin"是文件名字
 	if err != nil {
 		ilog.ErrorLogger.Println("文件创建失败", err.Error())
@@ -104,6 +92,7 @@ func WriteToRecFile(playerName string, roundNum int32, subdir string) {
 	defer file.Close()
 
 	// step.8 tick count
+	var tickCount int32 = int32(len(PlayerFramesMap[playerName]))
 	WriteToBuf(playerName, tickCount)
 
 	// step.9 bookmark count
@@ -125,7 +114,7 @@ func WriteToRecFile(playerName string, roundNum int32, subdir string) {
 		for idx := 0; idx < 2; idx++ {
 			WriteToBuf(playerName, frame.PredictedAngles[idx])
 		}
-		// 写入当前帧的origin（关键！必须在CSWeaponID之前）
+		// write per-frame origin right after predicted angles
 		for idx := 0; idx < 3; idx++ {
 			WriteToBuf(playerName, frame.Origin[idx])
 		}
@@ -154,5 +143,5 @@ func WriteToRecFile(playerName string, roundNum int32, subdir string) {
 	delete(PlayerFramesMap, playerName)
 	file.Write(bufMap[playerName].Bytes())
 	delete(bufMap, playerName) // 清理buffer map，避免多回合状态残留
-	ilog.InfoLogger.Printf("[第%d回合] 选手录像保存成功: %s.rec (共%d帧)\n", roundNum, playerName, tickCount)
+	ilog.InfoLogger.Printf("[Save] RoundFolder=%s, Player=%s.rec\n", roundFolder, safeName)
 }
