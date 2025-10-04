@@ -20,13 +20,25 @@ var bufMap map[string]*bytes.Buffer = make(map[string]*bytes.Buffer)
 var PlayerFramesMap map[string][]FrameInfo = make(map[string][]FrameInfo)
 
 var saveDir string = "./output"
+var outputSubDir string = ""
+
+// SetOutputSubDir 设置输出子目录（用于按demo名称分类）
+func SetOutputSubDir(subDir string) {
+	outputSubDir = subDir
+}
+
+// ResetState 重置所有全局状态（批量解析时需要）
+func ResetState() {
+	bufMap = make(map[string]*bytes.Buffer)
+	PlayerFramesMap = make(map[string][]FrameInfo)
+}
 
 func init() {
 	if ok, _ := PathExists(saveDir); !ok {
 		os.Mkdir(saveDir, os.ModePerm)
-		ilog.InfoLogger.Println("未找到保存目录，已创建：", saveDir)
+		ilog.InfoLogger.Println("Save directory not found, created:", saveDir)
 	} else {
-		ilog.InfoLogger.Println("保存目录存在：", saveDir)
+		ilog.InfoLogger.Println("Save directory exists:", saveDir)
 	}
 }
 
@@ -77,16 +89,23 @@ func InitPlayer(initFrame FrameInitInfo) {
 }
 
 func WriteToRecFile(playerName string, roundFolder string, subdir string) {
-	subDir := saveDir + "/" + roundFolder + "/" + subdir
-	if ok, _ := PathExists(subDir); !ok {
-		os.MkdirAll(subDir, os.ModePerm)
+	// 构建完整路径：output/[demoName]/roundX_TY-CTZ/t(或ct)
+	var fullPath string
+	if outputSubDir != "" {
+		fullPath = saveDir + "/" + outputSubDir + "/" + roundFolder + "/" + subdir
+	} else {
+		fullPath = saveDir + "/" + roundFolder + "/" + subdir
+	}
+	
+	if ok, _ := PathExists(fullPath); !ok {
+		os.MkdirAll(fullPath, os.ModePerm)
 	}
 	// sanitize file name for windows
 	safeName := sanitizeFileName(playerName)
-	fileName := subDir + "/" + safeName + ".rec"
-	file, err := os.Create(fileName) // 创建文件, "binbin"是文件名字
+	fileName := fullPath + "/" + safeName + ".rec"
+	file, err := os.Create(fileName)
 	if err != nil {
-		ilog.ErrorLogger.Println("文件创建失败", err.Error())
+		ilog.ErrorLogger.Println("Failed to create file:", err.Error())
 		return
 	}
 	defer file.Close()

@@ -18,14 +18,98 @@
 2. 下载需要解析的demo文件
    > 完美竞技平台的demo文件修改过格式，解析会出问题，建议用HLTV的demo
 3. 安装golang环境
-4. 运行脚本
-   ```bash
-   go run cmd/main.go -file {demo_path}
-   ```
-   `{demo_path}`为需要解析的demo文件路径
 
+### 单文件解析
 
-解析后的玩家录像文件会以回合数为子文件夹，保存在当前目录的`output/`文件夹下。
+运行脚本解析单个demo文件：
+```bash
+go run cmd/main.go -file {demo_path}
+```
+`{demo_path}`为需要解析的demo文件路径
+
+### 批量解析（推荐）
+
+**方法一：使用快捷脚本**
+
+Windows系统直接双击运行 `batch_parse.bat` 或在命令行中执行：
+```batch
+batch_parse.bat [demo文件夹路径]
+```
+
+Linux/Mac系统：
+```bash
+chmod +x batch_parse.sh
+./batch_parse.sh [demo文件夹路径]
+```
+
+如果不指定路径，默认解析 `./demo` 文件夹中的所有 `.dem` 文件。
+
+**方法二：使用命令行**
+
+先编译：
+```bash
+# Windows
+go build -o minidemo-encoder.exe .\cmd\main.go
+
+# Linux/Mac
+go build -o minidemo-encoder ./cmd/main.go
+```
+
+再执行批量解析：
+```bash
+# Windows
+minidemo-encoder.exe -dir="path\to\demo\folder"
+
+# Linux/Mac
+./minidemo-encoder -dir="path/to/demo/folder"
+```
+
+### 输出结构
+
+**单文件解析：** 解析后的玩家录像文件会以回合数为子文件夹，保存在当前目录的`output/`文件夹下。
+
+**批量解析：** 每个demo的解析结果会保存在独立的子文件夹中，文件夹以demo名称命名。例如：
+```
+output/
+├── match1/
+│   ├── round1_T5-CT5/
+│   │   ├── t/
+│   │   └── ct/
+│   └── round2_T4-CT5/
+├── match2/
+│   └── ...
+└── tournament_final/
+    └── ...
+```
+
+更多详细说明请查看 [批量解析说明.md](批量解析说明.md)。
+
+## REC 文件平衡工具
+
+批量解析后，某些地图的某些回合可能出现玩家数量不足的情况。REC 平衡工具可以自动补全，确保每个 t/ct 文件夹都有 **5 个不同的 .rec 文件**。
+
+### 使用方法
+
+**Windows:**
+```batch
+rec_balance.bat "D:\SteamLibrary\steamapps\common\Counter-Strike Global Offensive\csgo\addons\sourcemod\data\botmimic\demotest"
+```
+
+**Linux/Mac:**
+```bash
+chmod +x rec_balance.sh
+./rec_balance.sh /path/to/botmimic/demotest
+```
+
+### 补全规则
+
+- ✅ 只从同一地图文件夹下寻找文件（如 `de_dust2` 只从其他 `de_dust2` 文件夹复制）
+- ✅ t 文件夹只从其他 t 文件夹复制，ct 只从 ct 复制
+- ✅ 可以从同一局的其他回合或不同局的回合复制，只要不是同一个文件夹即可
+- ✅ 不会从同一文件夹内重复复制
+- ✅ 自动处理文件名冲突
+
+更多详细说明请查看 [REC平衡工具说明.md](REC平衡工具说明.md)。
 
 ## BotMimic
 

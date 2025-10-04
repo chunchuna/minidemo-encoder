@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 
+	encoder "github.com/hx-w/minidemo-encoder/internal/encoder"
 	ilog "github.com/hx-w/minidemo-encoder/internal/logger"
 	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
 	events "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/events"
@@ -33,7 +34,7 @@ func Start(filePath string) {
 
 	// 监听游戏开始事件，确保从准备阶段就开始录制
 	iParser.RegisterEventHandler(func(e events.MatchStart) {
-		ilog.InfoLogger.Println("比赛开始，开始录制")
+		ilog.InfoLogger.Println("Match started, recording begins")
 		recording = 1
 	})
 
@@ -48,7 +49,7 @@ func Start(filePath string) {
 			Players := append(tPlayers, ctPlayers...)
 			for _, player := range Players {
 				if player != nil && player.IsAlive() {
-					ilog.InfoLogger.Println("检测到玩家，自动开始录制")
+					ilog.InfoLogger.Println("Player detected, auto-start recording")
 					recording = 1
 					break
 				}
@@ -119,15 +120,7 @@ func Start(filePath string) {
 		roundStarted = 1
 		// If previous round is pending, flush it now (includes post-round gap)
 		if pendingRoundFolder != "" {
-			gs := iParser.GameState()
-			tPlayers := gs.TeamTerrorists().Members()
-			ctPlayers := gs.TeamCounterTerrorists().Members()
-			Players := append(tPlayers, ctPlayers...)
-			for _, player := range Players {
-				if player != nil {
-					saveToRecFile(player, pendingRoundFolder)
-				}
-			}
+			flushRecordedPlayers(pendingRoundFolder)
 			pendingRoundFolder = ""
 		}
 		recording = 1
@@ -148,7 +141,7 @@ func Start(filePath string) {
 	// 准备时间结束，正式开始
 	iParser.RegisterEventHandler(func(e events.RoundFreezetimeEnd) {
 		roundNum += 1
-		ilog.InfoLogger.Println("回合开始：", roundNum)
+		ilog.InfoLogger.Println("Round started:", roundNum)
 	})
 
 	// 回合结束，不包括自由活动时间
@@ -158,31 +151,24 @@ func Start(filePath string) {
 			roundNum = 0
 		}
 		// Keep recording to include post-round gap
-		ilog.InfoLogger.Println("回合结束：", roundNum)
+		ilog.InfoLogger.Println("Round ended:", roundNum)
 		gs := iParser.GameState()
-		tPlayers := gs.TeamTerrorists().Members()
-		ctPlayers := gs.TeamCounterTerrorists().Members()
-		Players := append(tPlayers, ctPlayers...)
 		tScore := gs.TeamTerrorists().Score()
 		ctScore := gs.TeamCounterTerrorists().Score()
 		pendingRoundFolder = fmt.Sprintf("round%d_T%d-CT%d", roundNum, tScore, ctScore)
-		ilog.InfoLogger.Printf("回合%d结束，共%d名选手，暂存目录：%s\n", roundNum, len(Players), pendingRoundFolder)
+		
+		// Count recorded players
+		recordedCount := len(encoder.PlayerFramesMap)
+		ilog.InfoLogger.Printf("Round %d ended, %d players recorded, pending folder: %s\n", roundNum, recordedCount, pendingRoundFolder)
 	})
 	err = iParser.ParseToEnd()
 	checkError(err)
 	// Final flush if demo ends without another RoundStart
 	if pendingRoundFolder != "" {
-		gs := iParser.GameState()
-		tPlayers := gs.TeamTerrorists().Members()
-		ctPlayers := gs.TeamCounterTerrorists().Members()
-		Players := append(tPlayers, ctPlayers...)
-		for _, player := range Players {
-			if player != nil {
-				saveToRecFile(player, pendingRoundFolder)
-			}
-		}
+		flushRecordedPlayers(pendingRoundFolder)
 		pendingRoundFolder = ""
 	}
 }
+
 
 

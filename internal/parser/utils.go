@@ -13,6 +13,12 @@ const Pi = 3.14159265358979323846
 var bufWeaponMap map[string]int32 = make(map[string]int32)
 var playerLastZ map[string]float32 = make(map[string]float32)
 
+// ResetState 重置所有全局状态（批量解析时需要）
+func ResetState() {
+	bufWeaponMap = make(map[string]int32)
+	playerLastZ = make(map[string]float32)
+}
+
 // Function to handle errors
 func checkError(err error) {
 	if err != nil {
