@@ -12,11 +12,13 @@ const Pi = 3.14159265358979323846
 
 var bufWeaponMap map[string]int32 = make(map[string]int32)
 var playerLastZ map[string]float32 = make(map[string]float32)
+var playerTeamMap map[string]string = make(map[string]string) // Track player team: "t" or "ct"
 
 // ResetState 重置所有全局状态（批量解析时需要）
 func ResetState() {
 	bufWeaponMap = make(map[string]int32)
 	playerLastZ = make(map[string]float32)
+	playerTeamMap = make(map[string]string)
 }
 
 // Function to handle errors
@@ -44,6 +46,13 @@ func parsePlayerInitFrame(player *common.Player) {
 	encoder.InitPlayer(iFrameInit)
 
 	playerLastZ[player.Name] = float32(player.Position().Z)
+	
+	// Track player team
+	if player.Team == common.TeamTerrorists {
+		playerTeamMap[player.Name] = "t"
+	} else if player.Team == common.TeamCounterTerrorists {
+		playerTeamMap[player.Name] = "ct"
+	}
 }
 
 func normalizeDegree(degree float64) float64 {
@@ -169,5 +178,22 @@ func saveToRecFile(player *common.Player, roundFolder string) {
 		encoder.WriteToRecFile(player.Name, roundFolder, "t")
 	} else {
 		encoder.WriteToRecFile(player.Name, roundFolder, "ct")
+	}
+}
+
+// flushRecordedPlayers saves all recorded players to .rec files
+func flushRecordedPlayers(roundFolder string) {
+	ilog.InfoLogger.Printf("Flushing recorded players for folder: %s\n", roundFolder)
+	
+	for playerName := range encoder.PlayerFramesMap {
+		frameCount := len(encoder.PlayerFramesMap[playerName])
+		if frameCount > 0 {
+			team := playerTeamMap[playerName]
+			if team == "" {
+				team = "unknown"
+			}
+			encoder.WriteToRecFile(playerName, roundFolder, team)
+			ilog.InfoLogger.Printf("Saved %d frames for player: %s (team: %s)\n", frameCount, playerName, team)
+		}
 	}
 }

@@ -15,7 +15,7 @@ type TickPlayer struct {
 	steamid uint64
 }
 
-func Start(filePath string) {
+func Start(filePath string, skipFreezetime bool) {
 	iFile, err := os.Open(filePath)
 	checkError(err)
 
@@ -31,11 +31,18 @@ func Start(filePath string) {
 		recording           = 0
 		pendingRoundFolder string
 	)
+	
+	if skipFreezetime {
+		ilog.InfoLogger.Println("Skip freezetime mode enabled")
+	}
 
 	// 监听游戏开始事件，确保从准备阶段就开始录制
 	iParser.RegisterEventHandler(func(e events.MatchStart) {
-		ilog.InfoLogger.Println("Match started, recording begins")
-		recording = 1
+		ilog.InfoLogger.Println("Match started")
+		if !skipFreezetime {
+			ilog.InfoLogger.Println("Recording begins")
+			recording = 1
+		}
 	})
 
 	iParser.RegisterEventHandler(func(e events.FrameDone) {
@@ -43,7 +50,8 @@ func Start(filePath string) {
 		currentTick := gs.IngameTick()
 
 		// 如果还未开始录制但检测到玩家，自动开始录制（适用于没有MatchStart事件的demo）
-		if recording == 0 {
+		// When skipFreezetime is enabled, this auto-start is disabled
+		if recording == 0 && !skipFreezetime {
 			tPlayers := gs.TeamTerrorists().Members()
 			ctPlayers := gs.TeamCounterTerrorists().Members()
 			Players := append(tPlayers, ctPlayers...)
@@ -123,17 +131,21 @@ func Start(filePath string) {
 			flushRecordedPlayers(pendingRoundFolder)
 			pendingRoundFolder = ""
 		}
-		recording = 1
-		// Initialize recording buffers and write initial positions/angles at round start
-		gs := iParser.GameState()
-		tPlayers := gs.TeamTerrorists().Members()
-		ctPlayers := gs.TeamCounterTerrorists().Members()
-		Players := append(tPlayers, ctPlayers...)
-		for _, player := range Players {
-			if player != nil {
-				// 重新初始化玩家（新回合开始）
-				parsePlayerInitFrame(player)
-				firstFrameFullsnap[player.SteamID64] = true
+		
+		// If skipFreezetime is enabled, don't start recording yet
+		if !skipFreezetime {
+			recording = 1
+			// Initialize recording buffers and write initial positions/angles at round start
+			gs := iParser.GameState()
+			tPlayers := gs.TeamTerrorists().Members()
+			ctPlayers := gs.TeamCounterTerrorists().Members()
+			Players := append(tPlayers, ctPlayers...)
+			for _, player := range Players {
+				if player != nil {
+					// 重新初始化玩家（新回合开始）
+					parsePlayerInitFrame(player)
+					firstFrameFullsnap[player.SteamID64] = true
+				}
 			}
 		}
 	})
@@ -142,6 +154,23 @@ func Start(filePath string) {
 	iParser.RegisterEventHandler(func(e events.RoundFreezetimeEnd) {
 		roundNum += 1
 		ilog.InfoLogger.Println("Round started:", roundNum)
+		
+		// If skipFreezetime is enabled, start recording now
+		if skipFreezetime {
+			recording = 1
+			gs := iParser.GameState()
+			tPlayers := gs.TeamTerrorists().Members()
+			ctPlayers := gs.TeamCounterTerrorists().Members()
+			Players := append(tPlayers, ctPlayers...)
+			for _, player := range Players {
+				if player != nil {
+					// Initialize players at freezetime end
+					parsePlayerInitFrame(player)
+					firstFrameFullsnap[player.SteamID64] = true
+				}
+			}
+			ilog.InfoLogger.Println("Recording started after freezetime")
+		}
 	})
 
 	// 回合结束，不包括自由活动时间

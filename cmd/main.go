@@ -14,28 +14,35 @@ import (
 func main() {
 	var singleFile string
 	var dirPath string
+	var skipFreezetime bool
 	
 	flag.StringVar(&singleFile, "file", "", "single demo file path")
 	flag.StringVar(&dirPath, "dir", "", "directory containing multiple demo files")
+	flag.BoolVar(&skipFreezetime, "skipfreeze", false, "skip freezetime recording (start recording after freezetime ends)")
 	flag.Parse()
 	
 	if dirPath != "" {
 		// 批量解析模式
-		parseDemoDirectory(dirPath)
+		parseDemoDirectory(dirPath, skipFreezetime)
 	} else if singleFile != "" {
 		// 单文件解析模式
-		iparser.Start(singleFile)
+		iparser.Start(singleFile, skipFreezetime)
 	} else {
 		fmt.Println("Usage:")
-		fmt.Println("  Single file: -file=\"path/to/demo.dem\"")
-		fmt.Println("  Batch mode:  -dir=\"path/to/demo/folder\"")
+		fmt.Println("  Single file: -file=\"path/to/demo.dem\" [-skipfreeze]")
+		fmt.Println("  Batch mode:  -dir=\"path/to/demo/folder\" [-skipfreeze]")
+		fmt.Println("Options:")
+		fmt.Println("  -skipfreeze: Skip freezetime recording, start after freezetime ends")
 	}
 }
 
-func parseDemoDirectory(dirPath string) {
+func parseDemoDirectory(dirPath string, skipFreezetime bool) {
 	fmt.Printf("========================================\n")
 	fmt.Printf("批量解析模式\n")
 	fmt.Printf("扫描目录: %s\n", dirPath)
+	if skipFreezetime {
+		fmt.Printf("模式: 跳过准备时间\n")
+	}
 	fmt.Printf("========================================\n")
 	
 	// 检查目录是否存在
@@ -82,10 +89,11 @@ func parseDemoDirectory(dirPath string) {
 		iencoder.SetOutputSubDir(demoName)
 		
 		// 解析 demo
-		iparser.Start(demoPath)
+		iparser.Start(demoPath, skipFreezetime)
 		
 		// 重置状态，避免多个demo之间数据混乱
 		iencoder.ResetState()
+		iparser.ResetState()
 		
 		successCount++
 		fmt.Printf("✓ 完成解析: %s\n", demoName)

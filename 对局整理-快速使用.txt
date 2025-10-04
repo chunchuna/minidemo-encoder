@@ -1,0 +1,47 @@
+==========================================
+CS:GO Match Organizer - 快速使用指南
+==========================================
+
+功能：
+  将output目录中解析好的对局文件按地图分类并自动整理到CS:GO目录
+
+使用步骤：
+  1. 确保已经运行过批量解析，output目录中有对局文件
+  2. 双击运行 organize_matches.bat
+  3. 等待工具自动完成整理
+
+默认目标目录：
+  D:\SteamLibrary\steamapps\common\Counter-Strike Global Offensive\csgo\addons\sourcemod\data\botmimic\demotest
+
+工具会自动：
+  ✓ 识别对局文件夹中的地图名称
+  ✓ 创建缺失的地图文件夹（de_nuke、de_dust2等）
+  ✓ 分配递增的数字文件夹（1、2、3...）
+  ✓ 复制所有round子文件夹到目标位置
+
+示例结果：
+  output/9ine-vs-apeks-m1-nuke/
+    └─> 复制到: demotest/de_nuke/1/
+  
+  output/lynn-vision-vs-rare-atom-m3-nuke/
+    └─> 复制到: demotest/de_nuke/2/
+
+命令行用法（高级）：
+  # 预览模式（不实际复制）
+  match_organizer.exe -dry
+  
+  # 自定义目标目录
+  match_organizer.exe -target="自定义路径"
+  
+  # 自定义源目录
+  match_organizer.exe -output="./custom_output"
+
+注意事项：
+  • 对局文件夹必须以"-地图名"结尾（如：xxx-nuke、xxx-dust2）
+  • 支持的地图：ancient、anubis、cache、dust2、inferno、mirage、nuke、overpass、train、vertigo
+  • 工具会自动找到下一个可用的数字编号
+
+详细说明：
+  查看 对局文件整理说明.md
+
+========================================== 
