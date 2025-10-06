@@ -3,6 +3,9 @@ package parser
 import (
 	"os"
 	"fmt"
+	"path/filepath"
+	"strings"
+	"strconv"
 
 	encoder "github.com/hx-w/minidemo-encoder/internal/encoder"
 	ilog "github.com/hx-w/minidemo-encoder/internal/logger"
@@ -22,6 +25,10 @@ func Start(filePath string, skipFreezetime bool) {
 	iParser := dem.NewParser(iFile)
 	defer iParser.Close()
 
+	// 从文件路径提取 demo 名称
+	demoName := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
+	var subdirSet bool = false  // 标记输出子目录是否已设置
+
 	// 处理特殊event构成的button表示
 	var buttonTickMap map[TickPlayer]int32 = make(map[TickPlayer]int32)
 	var firstFrameFullsnap map[uint64]bool = make(map[uint64]bool)
@@ -30,6 +37,7 @@ func Start(filePath string, skipFreezetime bool) {
 		roundNum            = 0
 		recording           = 0
 		pendingRoundFolder string
+		demoTickrate       float64  // 存储 demo 的 tickrate
 	)
 	
 	if skipFreezetime {
@@ -46,6 +54,14 @@ func Start(filePath string, skipFreezetime bool) {
 	})
 
 	iParser.RegisterEventHandler(func(e events.FrameDone) {
+		// 在第一帧时设置输出子目录（此时 tickrate 已可用）
+		if !subdirSet {
+			demoTickrate = iParser.TickRate()
+			rateStr := strconv.FormatFloat(demoTickrate, 'f', -1, 64)
+			encoder.SetOutputSubDir(rateStr + demoName)
+			subdirSet = true
+		}
+
 		gs := iParser.GameState()
 		currentTick := gs.IngameTick()
 
@@ -197,6 +213,9 @@ func Start(filePath string, skipFreezetime bool) {
 		flushRecordedPlayers(pendingRoundFolder)
 		pendingRoundFolder = ""
 	}
+
+	// 写入 tickrate 记事本（放在 demo 输出根目录下）
+	encoder.WriteTickrateNoteFile(demoTickrate)
 }
 
 

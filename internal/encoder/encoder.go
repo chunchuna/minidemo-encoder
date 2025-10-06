@@ -2,10 +2,12 @@ package encoder
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"time"
 	"strings"
 	"regexp"
+	"strconv"
 
 	ilog "github.com/hx-w/minidemo-encoder/internal/logger"
 )
@@ -163,4 +165,29 @@ func WriteToRecFile(playerName string, roundFolder string, subdir string) {
 	file.Write(bufMap[playerName].Bytes())
 	delete(bufMap, playerName) // 清理buffer map，避免多回合状态残留
 	ilog.InfoLogger.Printf("[Save] RoundFolder=%s, Player=%s.rec\n", roundFolder, safeName)
+}
+
+// WriteTickrateNoteFile 在当前 demo 的输出目录下创建一个名字为 tickrate 的记事本
+func WriteTickrateNoteFile(tickrate float64) {
+	// 保存到 output/[demoName]/ 目录；如果没有 demoName 子目录，则保存到 output/
+	var basePath string
+	if outputSubDir != "" {
+		basePath = saveDir + "/" + outputSubDir
+	} else {
+		basePath = saveDir
+	}
+	if ok, _ := PathExists(basePath); !ok {
+		os.MkdirAll(basePath, os.ModePerm)
+	}
+	// 文件名使用真实 tickrate 字符串（不做四舍五入），例如 64 或 128.015625
+	name := strconv.FormatFloat(tickrate, 'f', -1, 64)
+	fileName := basePath + "/" + name + ".txt"
+	file, err := os.Create(fileName)
+	if err != nil {
+		ilog.ErrorLogger.Println("Failed to create tickrate note:", err.Error())
+		return
+	}
+	defer file.Close()
+	file.WriteString(fmt.Sprintf("tickrate=%s", name))
+	ilog.InfoLogger.Printf("[Save] Tickrate note: %s\n", fileName)
 }

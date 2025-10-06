@@ -43,6 +43,10 @@ minidemo-encoder.exe -dir="%DEMO_DIR%" -skipfreeze
 
 echo.
 echo 解析完成！输出文件在 .\output 目录中
-echo 注意: 生成的 rec 文件不包含准备时间内容
+echo 注意: 
+echo   - 生成的 rec 文件不包含准备时间内容
+echo   - 每个 demo 的输出文件夹名格式为: {tickrate}{demo文件名}
+echo   - 例如: 128.015625your-demo-name
+echo   - 文件夹内包含该 demo 的 tickrate 信息文本文件
 echo.
 pause 

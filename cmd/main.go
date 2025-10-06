@@ -85,10 +85,7 @@ func parseDemoDirectory(dirPath string, skipFreezetime bool) {
 		fmt.Printf("\n[%d/%d] 正在解析: %s\n", i+1, len(demoFiles), demoName)
 		fmt.Printf("文件路径: %s\n", demoPath)
 		
-		// 设置输出子目录为 demo 名称
-		iencoder.SetOutputSubDir(demoName)
-		
-		// 解析 demo
+		// 解析 demo（输出子目录将由 parser 自动设置为 rate+demoName）
 		iparser.Start(demoPath, skipFreezetime)
 		
 		// 重置状态，避免多个demo之间数据混乱
