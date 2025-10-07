@@ -91,6 +91,7 @@ func parseDemoDirectory(dirPath string, skipFreezetime bool) {
 		// Reset state to avoid data confusion between multiple demos
 		iencoder.ResetState()
 		iparser.ResetState()
+		iparser.ResetChatMessages()
 		
 		successCount++
 		fmt.Printf("Done Parsing: %s\n", demoName)

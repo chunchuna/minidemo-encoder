@@ -29,6 +29,11 @@ func SetOutputSubDir(subDir string) {
 	outputSubDir = subDir
 }
 
+// GetOutputSubDir 获取当前输出子目录
+func GetOutputSubDir() string {
+	return outputSubDir
+}
+
 // ResetState 重置所有全局状态（批量解析时需要）
 func ResetState() {
 	bufMap = make(map[string]*bytes.Buffer)

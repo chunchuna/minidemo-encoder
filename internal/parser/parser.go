@@ -28,6 +28,9 @@ func Start(filePath string, skipFreezetime bool) {
 	// Extract demo name from file path
 	demoName := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
 	var subdirSet bool = false  // Flag to track if output subdir is set
+	
+	// Reset chat messages for new demo
+	ResetChatMessages()
 
 	// Handle special events for button representation
 	var buttonTickMap map[TickPlayer]int32 = make(map[TickPlayer]int32)
@@ -171,6 +174,9 @@ func Start(filePath string, skipFreezetime bool) {
 		roundNum += 1
 		ilog.InfoLogger.Println("Round started:", roundNum)
 		
+		// 更新聊天消息的当前回合数
+		SetCurrentChatRound(roundNum)
+		
 		// If skipFreezetime is enabled, start recording now
 		if skipFreezetime {
 			recording = 1
@@ -206,6 +212,36 @@ func Start(filePath string, skipFreezetime bool) {
 		recordedCount := len(encoder.PlayerFramesMap)
 		ilog.InfoLogger.Printf("Round %d ended, %d players recorded, pending folder: %s\n", roundNum, recordedCount, pendingRoundFolder)
 	})
+
+	// 聊天消息处理（ChatMessage 事件）
+	iParser.RegisterEventHandler(func(e events.ChatMessage) {
+		gs := iParser.GameState()
+		currentTick := gs.IngameTick()
+		
+		// 获取发送者信息
+		sender := "Unknown"
+		team := "Unknown"
+		
+		// 尝试从发送者获取信息
+		if e.Sender != nil {
+			sender = e.Sender.Name
+			switch e.Sender.Team {
+			case 2:
+				team = "T"
+			case 3:
+				team = "CT"
+			default:
+				team = "Spectator"
+			}
+		}
+		
+		// 判断是否为团队聊天（IsChatAll=false 表示团队聊天）
+		isTeamChat := !e.IsChatAll
+		
+		// 添加聊天消息
+		AddChatMessage(currentTick, sender, team, e.Text, isTeamChat)
+	})
+
 	err = iParser.ParseToEnd()
 	checkError(err)
 	// Final flush if demo ends without another RoundStart
@@ -216,6 +252,27 @@ func Start(filePath string, skipFreezetime bool) {
 
 	// 写入 tickrate 记事本（放在 demo 输出根目录下）
 	encoder.WriteTickrateNoteFile(demoTickrate)
+	
+	// 保存聊天消息到文件
+	outputDir := "./output"
+	if encoder.GetOutputSubDir() != "" {
+		outputDir = filepath.Join("./output", encoder.GetOutputSubDir())
+	}
+	
+	// 保存为 TXT 格式（完整聊天记录）
+	if err := SaveChatMessages(outputDir, demoName); err != nil {
+		ilog.InfoLogger.Printf("Failed to save chat messages: %v\n", err)
+	}
+	
+	// 保存为 CSV 格式（完整聊天记录）
+	if err := SaveChatMessagesCSV(outputDir, demoName); err != nil {
+		ilog.InfoLogger.Printf("Failed to save chat messages CSV: %v\n", err)
+	}
+	
+	// 按回合保存聊天消息（用于游戏中复现）
+	if err := SaveChatMessagesByRound(outputDir, ""); err != nil {
+		ilog.InfoLogger.Printf("Failed to save chat messages by round: %v\n", err)
+	}
 }
 
 
