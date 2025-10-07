@@ -107,6 +107,7 @@ const (
 )
 
 var WeaponMap map[string]CSWeaponID
+var unknownWeaponsLogged map[string]bool
 
 func init() {
 	WeaponMap = map[string]CSWeaponID{
@@ -180,14 +181,44 @@ func init() {
 		"Snowball":           CSWeapon_SNOWBALL,
 		"Zeus x27":           CSWeapon_TASER,
 		"C4":                 CSWeapon_C4,
+		// Equipment and special items
+		"Defuse Kit":         CSWeapon_DEFUSER,
+		"Kevlar Vest":        CSWeapon_KEVLAR,
+		"Assault Suit":       CSWeapon_ASSAULTSUIT,
+		"Heavy Assault Suit": CSWeapon_HEAVYASSAULTSUIT,
+		"Rescue Kit":         CSWeapon_CUTTERS,
+		"Healthshot":         CSWeapon_HEALTHSHOT,
+		"Tablet":             CSWeapon_TABLET,
+		"Breach Charge":      CSWeapon_BREACHCHARGE,
+		"Bump Mine":          CSWeapon_BUMPMINE,
+		"Tag Grenade":        CSWeapon_TAGGRENADE,
+		// Handle common unknown or special cases
+		"Unknown":            CSWeapon_NONE,
+		"UNKNOWN":            CSWeapon_NONE,
+		"":                   CSWeapon_NONE,
 	}
+	unknownWeaponsLogged = make(map[string]bool)
+}
+
+// ResetWeaponLogState reset the weapon logging state for batch processing
+func ResetWeaponLogState() {
+	unknownWeaponsLogged = make(map[string]bool)
 }
 
 func WeaponStr2ID(weaponName string) CSWeaponID {
+	// Handle empty string or whitespace
+	if weaponName == "" || weaponName == "UNKNOWN" || weaponName == "Unknown" {
+		return CSWeapon_NONE
+	}
+	
 	if WeaponID, ok := WeaponMap[weaponName]; ok {
 		return WeaponID
 	} else {
-		ilog.WarningLogger.Printf("[WeaponConvert] <%s> missing", weaponName)
+		// Only log once per unique unknown weapon to avoid spam
+		if !unknownWeaponsLogged[weaponName] {
+			ilog.WarningLogger.Printf("[WeaponConvert] <%s> missing", weaponName)
+			unknownWeaponsLogged[weaponName] = true
+		}
 		return CSWeapon_NONE
 	}
 }

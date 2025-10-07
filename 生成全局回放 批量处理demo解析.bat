@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
-REM 批量解析 CS:GO Demo 脚本
-REM 用法: batch_parse.bat [demo文件夹路径]
+REM Batch parse CS:GO Demo script
+REM Usage: batch_parse.bat [demo folder path]
 
 setlocal enabledelayedexpansion
 
@@ -12,39 +12,39 @@ if "%~1"=="" (
 )
 
 echo ========================================
-echo CS:GO Demo 批量解析工具
+echo CS:GO Demo Batch Parser
 echo ========================================
-echo Demo 目录: %DEMO_DIR%
+echo Demo Directory: %DEMO_DIR%
 echo.
 
 if not exist "%DEMO_DIR%" (
-    echo 错误: 目录不存在: %DEMO_DIR%
-    echo 用法: batch_parse.bat [demo文件夹路径]
+    echo Error: Directory does not exist: %DEMO_DIR%
+    echo Usage: batch_parse.bat [demo folder path]
     pause
     exit /b 1
 )
 
-REM 检查是否需要编译
+REM Check if compilation is needed
 if not exist "minidemo-encoder.exe" (
-    echo 正在编译程序...
+    echo Compiling program...
     go build -o minidemo-encoder.exe .\cmd\main.go
     if errorlevel 1 (
-        echo 编译失败！
+        echo Compilation failed!
         pause
         exit /b 1
     )
-    echo 编译完成！
+    echo Compilation completed!
     echo.
 )
 
-REM 执行批量解析
+REM Execute batch parsing
 minidemo-encoder.exe -dir="%DEMO_DIR%"
 
 echo.
-echo 解析完成！输出文件在 .\output 目录中
-echo 注意: 
-echo   - 每个 demo 的输出文件夹名格式为: {tickrate}{demo文件名}
-echo   - 例如: 64your-demo-name 或 128.015625your-demo-name
-echo   - 文件夹内包含该 demo 的 tickrate 信息文本文件
+echo Parsing completed! Output files are in .\output directory
+echo Note: 
+echo   - Output folder name format for each demo: {tickrate}{demo-filename}
+echo   - Example: 64your-demo-name or 128.015625your-demo-name
+echo   - Folder contains tickrate information text file for that demo
 echo.
 pause 

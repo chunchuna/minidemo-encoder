@@ -38,20 +38,20 @@ func main() {
 
 func parseDemoDirectory(dirPath string, skipFreezetime bool) {
 	fmt.Printf("========================================\n")
-	fmt.Printf("批量解析模式\n")
-	fmt.Printf("扫描目录: %s\n", dirPath)
+	fmt.Printf("Batch Parsing Mode\n")
+	fmt.Printf("Scanning Directory: %s\n", dirPath)
 	if skipFreezetime {
-		fmt.Printf("模式: 跳过准备时间\n")
+		fmt.Printf("Mode: Skip Freezetime\n")
 	}
 	fmt.Printf("========================================\n")
 	
-	// 检查目录是否存在
+	// Check if directory exists
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		fmt.Printf("错误: 目录不存在: %s\n", dirPath)
+		fmt.Printf("Error: Directory does not exist: %s\n", dirPath)
 		return
 	}
 	
-	// 扫描所有 .dem 文件
+	// Scan all .dem files
 	demoFiles := []string{}
 	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -64,44 +64,44 @@ func parseDemoDirectory(dirPath string, skipFreezetime bool) {
 	})
 	
 	if err != nil {
-		fmt.Printf("错误: 扫描目录失败: %v\n", err)
+		fmt.Printf("Error: Failed to scan directory: %v\n", err)
 		return
 	}
 	
 	if len(demoFiles) == 0 {
-		fmt.Printf("未找到任何 .dem 文件\n")
+		fmt.Printf("No .dem files found\n")
 		return
 	}
 	
-	fmt.Printf("找到 %d 个 demo 文件\n", len(demoFiles))
+	fmt.Printf("Found %d demo files\n", len(demoFiles))
 	fmt.Printf("========================================\n\n")
 	
-	// 解析每个 demo
+	// Parse each demo
 	successCount := 0
 	for i, demoPath := range demoFiles {
-		// 从文件名提取 demo 名称（不含扩展名）
+		// Extract demo name from filename (without extension)
 		demoName := strings.TrimSuffix(filepath.Base(demoPath), filepath.Ext(demoPath))
 		
-		fmt.Printf("\n[%d/%d] 正在解析: %s\n", i+1, len(demoFiles), demoName)
-		fmt.Printf("文件路径: %s\n", demoPath)
+		fmt.Printf("\n[%d/%d] Parsing: %s\n", i+1, len(demoFiles), demoName)
+		fmt.Printf("File Path: %s\n", demoPath)
 		
-		// 解析 demo（输出子目录将由 parser 自动设置为 rate+demoName）
+		// Parse demo (output subdir will be auto-set by parser to rate+demoName)
 		iparser.Start(demoPath, skipFreezetime)
 		
-		// 重置状态，避免多个demo之间数据混乱
+		// Reset state to avoid data confusion between multiple demos
 		iencoder.ResetState()
 		iparser.ResetState()
 		
 		successCount++
-		fmt.Printf("✓ 完成解析: %s\n", demoName)
+		fmt.Printf("Done Parsing: %s\n", demoName)
 		fmt.Printf("----------------------------------------\n")
 	}
 	
-	// 重置输出子目录
+	// Reset output subdirectory
 	iencoder.SetOutputSubDir("")
 	
 	fmt.Printf("\n========================================\n")
-	fmt.Printf("批量解析完成！共处理 %d 个 demo 文件\n", successCount)
-	fmt.Printf("输出目录: %s\n", "./output")
+	fmt.Printf("Batch Parsing Completed! Processed %d demo files\n", successCount)
+	fmt.Printf("Output Directory: %s\n", "./output")
 	fmt.Printf("========================================\n")
 }

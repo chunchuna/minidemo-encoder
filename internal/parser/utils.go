@@ -14,11 +14,12 @@ var bufWeaponMap map[string]int32 = make(map[string]int32)
 var playerLastZ map[string]float32 = make(map[string]float32)
 var playerTeamMap map[string]string = make(map[string]string) // Track player team: "t" or "ct"
 
-// ResetState 重置所有全局状态（批量解析时需要）
+// ResetState reset all global state (required for batch parsing)
 func ResetState() {
 	bufWeaponMap = make(map[string]int32)
 	playerLastZ = make(map[string]float32)
 	playerTeamMap = make(map[string]string)
+	ResetWeaponLogState()
 }
 
 // Function to handle errors
@@ -89,7 +90,11 @@ func parsePlayerFrame(player *common.Player, addonButton int32, tickrate float64
 	// ---- weapon encode
 	var currWeaponID int32 = 0
 	if player.ActiveWeapon() != nil {
-		currWeaponID = int32(WeaponStr2ID(player.ActiveWeapon().String()))
+		weaponStr := player.ActiveWeapon().String()
+		// Filter out unknown or empty weapon names
+		if weaponStr != "" && weaponStr != "<UNKNOWN>" && weaponStr != "UNKNOWN" && weaponStr != "Unknown" {
+			currWeaponID = int32(WeaponStr2ID(weaponStr))
+		}
 	}
 	if len(encoder.PlayerFramesMap[player.Name]) == 0 {
 		iFrameInfo.CSWeaponID = currWeaponID

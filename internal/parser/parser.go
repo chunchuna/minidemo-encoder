@@ -25,11 +25,11 @@ func Start(filePath string, skipFreezetime bool) {
 	iParser := dem.NewParser(iFile)
 	defer iParser.Close()
 
-	// 从文件路径提取 demo 名称
+	// Extract demo name from file path
 	demoName := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
-	var subdirSet bool = false  // 标记输出子目录是否已设置
+	var subdirSet bool = false  // Flag to track if output subdir is set
 
-	// 处理特殊event构成的button表示
+	// Handle special events for button representation
 	var buttonTickMap map[TickPlayer]int32 = make(map[TickPlayer]int32)
 	var firstFrameFullsnap map[uint64]bool = make(map[uint64]bool)
 	var (
@@ -37,14 +37,14 @@ func Start(filePath string, skipFreezetime bool) {
 		roundNum            = 0
 		recording           = 0
 		pendingRoundFolder string
-		demoTickrate       float64  // 存储 demo 的 tickrate
+		demoTickrate       float64  // Store demo tickrate
 	)
 	
 	if skipFreezetime {
 		ilog.InfoLogger.Println("Skip freezetime mode enabled")
 	}
 
-	// 监听游戏开始事件，确保从准备阶段就开始录制
+	// Listen for match start event to ensure recording from preparation phase
 	iParser.RegisterEventHandler(func(e events.MatchStart) {
 		ilog.InfoLogger.Println("Match started")
 		if !skipFreezetime {
@@ -54,7 +54,7 @@ func Start(filePath string, skipFreezetime bool) {
 	})
 
 	iParser.RegisterEventHandler(func(e events.FrameDone) {
-		// 在第一帧时设置输出子目录（此时 tickrate 已可用）
+		// Set output subdir on first frame (tickrate is available at this point)
 		if !subdirSet {
 			demoTickrate = iParser.TickRate()
 			rateStr := strconv.FormatFloat(demoTickrate, 'f', -1, 64)
@@ -65,7 +65,7 @@ func Start(filePath string, skipFreezetime bool) {
 		gs := iParser.GameState()
 		currentTick := gs.IngameTick()
 
-		// 如果还未开始录制但检测到玩家，自动开始录制（适用于没有MatchStart事件的demo）
+		// Auto-start recording if players detected (for demos without MatchStart event)
 		// When skipFreezetime is enabled, this auto-start is disabled
 		if recording == 0 && !skipFreezetime {
 			tPlayers := gs.TeamTerrorists().Members()
@@ -86,7 +86,7 @@ func Start(filePath string, skipFreezetime bool) {
 			Players := append(tPlayers, ctPlayers...)
 			for _, player := range Players {
 				if player != nil {
-					// 检查玩家是否已初始化，如果没有则初始化（确保捕获准备阶段早期行为）
+					// Check if player is initialized, if not initialize (ensure early preparation phase capture)
 					if _, exists := playerLastZ[player.Name]; !exists {
 						parsePlayerInitFrame(player)
 						firstFrameFullsnap[player.SteamID64] = true
