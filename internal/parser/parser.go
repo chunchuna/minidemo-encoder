@@ -151,8 +151,11 @@ func Start(filePath string, skipFreezetime bool) {
 			pendingRoundFolder = ""
 		}
 		
-		// If skipFreezetime is enabled, don't start recording yet
-		if !skipFreezetime {
+		// If skipFreezetime is enabled, stop recording here (before freezetime)
+		if skipFreezetime {
+			recording = 0  // Stop recording to exclude freezetime
+			ilog.InfoLogger.Println("Recording stopped at RoundStart (before freezetime)")
+		} else {
 			recording = 1
 			// Initialize recording buffers and write initial positions/angles at round start
 			gs := iParser.GameState()
